@@ -1,0 +1,76 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'Email', defaultValue: 'suporte.admin@sysvision.global', description: 'Email do TAC')
+        string(name: 'Senha', defaultValue: 'Sys@lo321', description: 'Senha do TAC')
+        string(name: 'taskId', defaultValue: '', description: 'ID Da Task')
+        string(name: 'targetServer', defaultValue: 'PROD', description: 'Servidor de destino')
+    }
+
+    environment {
+        successCount = 0 // Variável para contar sucessos consecutivos
+    }
+
+    stages {
+
+        stage('Verificar Status da Task') {
+            steps {
+                script {
+                    def taskStatus = sh(script: """sshpass -p '${params.Senha}' ssh -o StrictHostKeyChecking=no sysvision@10.150.71.101 '
+                        cd /opt/Talend-8.0.1/tac/apache-tomcat/webapps/org.talend.administrator/WEB-INF/classes/ &&
+                        ./MetaServletCaller.sh \
+                        --tac-url=http://10.150.71.101:8080/org.talend.administrator \
+                        --json-params="{ \
+                            \\"actionName\\": \\"getTaskStatus\\", \
+                            \\"authPass\\": \\"${params.Senha}\\", \
+                            \\"authUser\\": \\"${params.Email}\\", \
+                            \\"taskId\\": \\"${params.taskId}\\" \
+                        }"
+                    '""", returnStdout: true).trim()
+
+                    // Verifica se a task teve sucesso
+                    if (taskStatus == "SUCCESS") {
+                        successCount++
+                    } else {
+                        successCount = 0 // Reseta caso haja falha
+                    }
+
+                    echo "Status atual: ${taskStatus}, Sucessos consecutivos: ${successCount}"
+                }
+            }
+        }
+
+        stage('Promover para PROD após 3 Sucessos') {
+            when {
+                expression { successCount >= 3 } // Executa somente após 3 sucessos
+            }
+            steps {
+                script {
+                    echo "Iniciando promoção para ${params.targetServer}"
+                    sh """
+                    sshpass -p '${params.Senha}' ssh -o StrictHostKeyChecking=no sysvision@10.150.71.101 '
+                    cd /opt/Talend-8.0.1/tac/apache-tomcat/webapps/org.talend.administrator/WEB-INF/classes/ &&
+                    ./MetaServletCaller.sh \
+                    --tac-url=http://10.150.71.101:8080/org.talend.administrator \
+                    --json-params="{ \
+                        \\"actionName\\": \\"associatePreGeneratedJob\\", \
+                        \\"active\\": true, \
+                        \\"authPass\\": \\"${params.Senha}\\", \
+                        \\"authUser\\": \\"${params.Email}\\", \
+                        \\"taskName\\": \\"NewTaskOn${params.targetServer}\\", \
+                        \\"contextName\\": \\"Default\\", \
+                        \\"description\\": \\"Promovido para ${params.targetServer}\\", \
+                        \\"nexusArtifactId\\": \\"${params.NEXUS_ARTIFACT_ID}\\", \
+                        \\"nexusGroupId\\": \\"org.example.prod.job\\", \
+                        \\"nexusRepository\\": \\"releases\\", \
+                        \\"nexusVersion\\": \\"0.1.0\\", \
+                        \\"timeout\\": 0
+                    }"
+                    '
+                    """
+                }
+            }
+        }
+    }
+}
