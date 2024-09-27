@@ -7,7 +7,7 @@ pipeline {
         string(name: 'taskName', defaultValue: '', description: 'Nome Da Task')
         // Adicione outros parâmetros conforme necessário
     }
-//dddd
+
     stages {
         stage('Acessar Servidor e Executar Comando') {
             steps {
