@@ -2,15 +2,23 @@ pipeline {
     agent any
     
     parameters {
-        string(name: 'NEXUS_ARTIFACT_ID', defaultValue: 'Job_Master', description: 'ID do artefato Nexus')
-        string(name: 'Senha', defaultValue: 'Sys@lo321', description: 'Senha Tac')
-        string(name: 'Email', defaultValue: 'suporte.admin@sysvision.global', description: 'Email TAC')
-        string(name: 'TASK_NAME', defaultValue: 'teste_mee', description: 'Nome da tarefa')
-        string(name: 'Contexto', defaultValue: 'Default', description: 'Contexto Da Task')
-        string(name: 'Descricao', defaultValue: 'teste', description: 'Descrição Da Task')
-        string(name: 'logLevel', defaultValue: 'Info', description: 'Nivel Do Log')
-        string(name: 'nexusRepository', defaultValue: 'releases', description: 'Repositorio do Nexus')
-        string(name: 'Tempo_Para_Execucao', defaultValue: '0', description: 'Tempo Para Execução Da Task')
+        password(name: 'authPass', defaultValue: 'Sys@lo321', description: 'Senha de autenticação')
+        string(name: 'authUser', defaultValue: 'suporte.admin@sysvision.global', description: 'Usuário de autenticação')
+        choice(name: 'contextName', choices: ['Default', 'DEV', 'QA', 'PRD'], description: 'Nome do contexto')
+        string(name: 'description', defaultValue: 'Job_Master utilizado para testes', description: 'Descrição do job')
+        string(name: 'executionServerName', defaultValue: 'Job Server', description: 'Nome do servidor de execução')
+        string(name: 'importType', defaultValue: 'Nexus', description: 'Tipo de importação')
+        choice(name: 'logLevel', choices: ['Info', 'Trace', 'Debug', 'Warn', 'Error', 'Fatal', 'Off'], description: 'Nível de log')
+        string(name: 'nexusArtifactId', defaultValue: 'Job_Master', description: 'ID do artefato no Nexus')
+        string(name: 'nexusGroupId', defaultValue: 'org.example.teste_java17.job', description: 'Grupo do artefato no Nexus')
+        choice(name: 'nexusRepository', choices: ['releases', 'snapshot'], description: 'Repositório do Nexus')
+        string(name: 'nexusVersion', defaultValue: '0.1.0', description: 'Versão do artefato no Nexus')
+        choice(name: 'onUnknownStateJob', choices: ['Reset task', 'Wait', 'Restart task', 'Recover task'], description: 'Ação no estado desconhecido do JobServer')
+        booleanParam(name: 'pauseOnError', defaultValue: false, description: 'Pausar em caso de erro')
+        string(name: 'taskName', defaultValue: 'Job_Master', description: 'Nome da tarefa')
+        choice(name: 'taskType', choices: ['Normal', 'Artifact'], description: 'Tipo de tarefa')
+        string(name: 'timeout', defaultValue: '0', description: 'Tempo limite de execução')
+        booleanParam(name: 'execStatisticsEnabled', defaultValue: true, description: 'Habilitar estatísticas de execução')
         // Adicione outros parâmetros conforme necessário
         
     }
@@ -26,23 +34,24 @@ pipeline {
                     --tac-url=http://10.150.71.101:8080/org.talend.administrator \
                     --json-params=" \
                     { \
-                        'actionName': 'associatePreGeneratedJob',
-                        'active': true,
-                        'authPass': '${Senha}',
-                        'authUser': '${Email}',
-                        'contextName': '${Contexto}',
-                        'description': '${Descricao}',
-                        'executionServerName': 'Job Server',
-                        'importType': 'Nexus',
-                        'logLevel': '${logLevel}',
-                        'nexusArtifactId': '${NEXUS_ARTIFACT_ID}',
-                        'nexusGroupId': 'org.example.teste_java17.job',
-                        'nexusRepository': '${nexusRepository}',
-                        'nexusVersion': '0.1.0',
-                        'onUnknownStateJob': 'WAIT',
-                        'pauseOnError': false,
-                        'taskName': '${TASK_NAME}',
-                        'timeout': ${Tempo_Para_Execucao}
+                        \\\"active\\\": true, \
+                        \\\"authPass\\\": \\\"${authPass}\\\", \
+                        \\\"authUser\\\": \\\"${authUser}\\\", \
+                        \\\"contextName\\\": \\\"${contextName}\\\", \
+                        \\\"description\\\": \\\"${description}\\\", \
+                        \\\"executionServerName\\\": \\\"${executionServerName}\\\", \
+                        \\\"importType\\\": \\\"${importType}\\\", \
+                        \\\"logLevel\\\": \\\"${logLevel}\\\", \
+                        \\\"nexusArtifactId\\\": \\\"${nexusArtifactId}\\\", \
+                        \\\"nexusGroupId\\\": \\\"${nexusGroupId}\\\", \
+                        \\\"nexusRepository\\\": \\\"${nexusRepository}\\\", \
+                        \\\"nexusVersion\\\": \\\"${nexusVersion}\\\", \
+                        \\\"onUnknownStateJob\\\": \\\"${onUnknownStateJob}\\\", \
+                        \\\"pauseOnError\\\": ${pauseOnError}, \
+                        \\\"taskName\\\": \\\"${taskName}\\\", \
+                        \\\"taskType\\\": \\\"${taskType}\\\", \
+                        \\\"timeout\\\": \\\"${timeout}\\\", \
+                        \\\"execStatisticsEnabled\\\": ${execStatisticsEnabled}}"
                     }"
                     ' """
                 }
