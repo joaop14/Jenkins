@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+    
+    parameters {
+        string(name: 'NEXUS_ARTIFACT_ID', defaultValue: 'Job_Master', description: 'ID do artefato Nexus')
+        string(name: 'Senha', defaultValue: 'Sys@lo321', description: 'Senha Tac')
+        string(name: 'Email', defaultValue: 'suporte.admin@sysvision.global', description: 'Email TAC')
+        string(name: 'TASK_NAME', defaultValue: 'teste_mee', description: 'Nome da tarefa')
+        string(name: 'Contexto', defaultValue: 'Default', description: 'Contexto Da Task')
+        string(name: 'Descricao', defaultValue: 'teste', description: 'Descrição Da Task')
+        string(name: 'logLevel', defaultValue: 'Info', description: 'Nivel Do Log')
+        string(name: 'nexusRepository', defaultValue: 'releases', description: 'Repositorio do Nexus')
+        string(name: 'Tempo_Para_Execucao', defaultValue: '0', description: 'Tempo Para Execução Da Task')
+        // Adicione outros parâmetros conforme necessário
+        
+    }
+
+    stages {
+        stage('Acessar Servidor e Executar Comando') {
+            steps {
+                script {
+                    sh """
+                    sshpass -p 'Sys@lo321' ssh -o StrictHostKeyChecking=no sysvision@10.150.71.101 '
+                    cd /opt/Talend-8.0.1/tac/apache-tomcat/webapps/org.talend.administrator/WEB-INF/classes/ &&
+                    ./MetaServletCaller.sh \
+                    --tac-url=http://10.150.71.101:8080/org.talend.administrator \
+                    --json-params=" \
+                    { \
+                        'actionName': 'associatePreGeneratedJob',
+                        'active': true,
+                        'authPass': '${Senha}',
+                        'authUser': '${Email}',
+                        'contextName': '${Contexto}',
+                        'description': '${Descricao}',
+                        'executionServerName': 'Job Server',
+                        'importType': 'Nexus',
+                        'logLevel': '${logLevel}',
+                        'nexusArtifactId': '${NEXUS_ARTIFACT_ID}',
+                        'nexusGroupId': 'org.example.teste_java17.job',
+                        'nexusRepository': '${nexusRepository}',
+                        'nexusVersion': '0.1.0',
+                        'onUnknownStateJob': 'WAIT',
+                        'pauseOnError': false,
+                        'taskName': '${TASK_NAME}',
+                        'timeout': ${Tempo_Para_Execucao}
+                    }"
+                    ' """
+                }
+            }
+        }
+    }
+}
