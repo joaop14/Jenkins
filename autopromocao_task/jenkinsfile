@@ -6,6 +6,7 @@ pipeline {
         string(name: 'Senha', defaultValue: 'Sys@lo321', description: 'Senha do TAC')
         string(name: 'taskId', defaultValue: '', description: 'ID Da Task')
         string(name: 'targetServer', defaultValue: 'PROD', description: 'Servidor de destino')
+        string(name: 'nexusArtifactId', defaultValue: '', description: 'ID do artefato no Nexus')
     }
 
     environment {
@@ -30,7 +31,7 @@ pipeline {
                     '""", returnStdout: true).trim()
 
                     // Verifica se a task teve sucesso
-                    if (taskStatus == "READY_TO_RUN") {
+                    if (taskStatus == "NO_ERROR") {
                         successCount++
                     } else {
                         successCount = 0 // Reseta caso haja falha
@@ -59,12 +60,12 @@ pipeline {
                         \\"authPass\\": \\"${params.Senha}\\", \
                         \\"authUser\\": \\"${params.Email}\\", \
                         \\"taskName\\": \\"NewTaskOn${params.targetServer}\\", \
-                        \\"contextName\\": \\"Default\\", \
+                        \\"contextName\\": \\"${params.targetServer}\\", \
                         \\"description\\": \\"Promovido para ${params.targetServer}\\", \
-                        \\"nexusArtifactId\\": \\"${params.NEXUS_ARTIFACT_ID}\\", \
-                        \\"nexusGroupId\\": \\"org.example.prod.job\\", \
+                        \\"nexusArtifactId\\": \\"${params.nexusArtifactId}\\", \
+                        \\"nexusGroupId\\": \\"org.example.teste_java17.job\\", \
                         \\"nexusRepository\\": \\"releases\\", \
-                        \\"nexusVersion\\": \\"0.1.0\\", \
+                        \\"nexusVersion\\": \\"1.0.0\\", \
                         \\"timeout\\": 0
                     }"
                     '
