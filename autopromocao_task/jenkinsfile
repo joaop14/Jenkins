@@ -4,72 +4,50 @@ pipeline {
     parameters {
         string(name: 'Email', defaultValue: 'suporte.admin@sysvision.global', description: 'Email do TAC')
         string(name: 'Senha', defaultValue: 'Sys@lo321', description: 'Senha do TAC')
-        string(name: 'taskId', defaultValue: '', description: 'ID Da Task')
-        string(name: 'targetServer', defaultValue: 'PROD', description: 'Servidor de destino')
-        string(name: 'nexusArtifactId', defaultValue: '', description: 'ID do artefato no Nexus')
+        string(name: 'taskId', defaultValue: '', description: 'Id da Task')
+        // Adicione outros parâmetros conforme necessário
     }
 
     environment {
-        successCount = 0 // Variável para contar sucessos consecutivos
+        SUCCESS_COUNT = 0  // Contador de sucessos
     }
 
     stages {
-
-        stage('Verificar Status da Task') {
+        stage('Acessar Servidor e Verificar Status') {
             steps {
                 script {
-                    def taskStatus = sh(script: """sshpass -p '${params.Senha}' ssh -o StrictHostKeyChecking=no sysvision@10.150.71.101 '
-                        cd /opt/Talend-8.0.1/tac/apache-tomcat/webapps/org.talend.administrator/WEB-INF/classes/ &&
-                        ./MetaServletCaller.sh \
-                        --tac-url=http://10.150.71.101:8080/org.talend.administrator \
-                        --json-params="{ \
-                            \\"actionName\\": \\"getTaskStatus\\", \
-                            \\"authPass\\": \\"${params.Senha}\\", \
-                            \\"authUser\\": \\"${params.Email}\\", \
-                            \\"taskId\\": \\"${params.taskId}\\" \
-                        }"
-                    '""", returnStdout: true).trim()
+                    def status = sh(script: """
+                    sshpass -p 'Sys@lo321' ssh -o StrictHostKeyChecking=no sysvision@10.150.71.101 '
+                    cd /opt/Talend-8.0.1/tac/apache-tomcat/webapps/org.talend.administrator/WEB-INF/classes/ &&
+                    ./MetaServletCaller.sh --tac-url=http://10.150.71.101:8080/org.talend.administrator --json-params="
+                    { 
+                        \\"actionName\\": \\"getTaskStatus\\",
+                        \\"authPass\\": \\"${Senha}\\",
+                        \\"authUser\\": \\"${Email}\\",
+                        \\"taskId\\": \\"${taskId}\\"
+                    }"'""", returnStdout: true).trim()
 
-                    // Verifica se a task teve sucesso
-                    if (taskStatus == "NO_ERROR") {
-                        successCount++
+                    if (status == "NO_ERROR") {
+                        SUCCESS_COUNT = SUCCESS_COUNT.toInteger() + 1
+                        echo "Sucesso! Contador: ${SUCCESS_COUNT}"
                     } else {
-                        successCount = 0 // Reseta caso haja falha
+                        SUCCESS_COUNT = 0
+                        echo "Erro encontrado. Contador resetado."
                     }
 
-                    echo "Status atual: ${taskStatus}, Sucessos consecutivos: ${successCount}"
+                    writeFile file: 'success_count.txt', text: "${SUCCESS_COUNT}"
                 }
             }
         }
+    }
 
-        stage('Promover para PROD após 3 Sucessos') {
-            when {
-                expression { successCount >= 3 } // Executa somente após 3 sucessos
-            }
-            steps {
-                script {
-                    echo "Iniciando promoção para ${params.targetServer}"
-                    sh """
-                    sshpass -p '${params.Senha}' ssh -o StrictHostKeyChecking=no sysvision@10.150.71.101 '
-                    cd /opt/Talend-8.0.1/tac/apache-tomcat/webapps/org.talend.administrator/WEB-INF/classes/ &&
-                    ./MetaServletCaller.sh \
-                    --tac-url=http://10.150.71.101:8080/org.talend.administrator \
-                    --json-params="{ \
-                        \\"actionName\\": \\"associatePreGeneratedJob\\", \
-                        \\"active\\": true, \
-                        \\"authPass\\": \\"${params.Senha}\\", \
-                        \\"authUser\\": \\"${params.Email}\\", \
-                        \\"taskName\\": \\"NewTaskOn${params.targetServer}\\", \
-                        \\"contextName\\": \\"${params.targetServer}\\", \
-                        \\"description\\": \\"Promovido para ${params.targetServer}\\", \
-                        \\"nexusArtifactId\\": \\"${params.nexusArtifactId}\\", \
-                        \\"nexusGroupId\\": \\"org.example.teste_java17.job\\", \
-                        \\"nexusRepository\\": \\"releases\\", \
-                        \\"nexusVersion\\": \\"1.0.0\\", \
-                        \\"timeout\\": 0
-                    }"
-                    '
-                    """
+    post {
+        success {
+            script {
+                // Se atingiu 3 sucessos, dispara a pipeline de produção
+                def successCount = readFile('success_count.txt').toInteger()
+                if (successCount >= 3) {
+                    build job: 'criação_Job_Talend'  // Nome da outra pipeline que promove para produção
                 }
             }
         }
