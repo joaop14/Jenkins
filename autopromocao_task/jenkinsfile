@@ -9,7 +9,7 @@ pipeline {
     }
 
     environment {
-        env.SUCCESS_COUNT = 0  // Contador de sucessos
+        SUCCESS_COUNT = 0  // Contador de sucessos
     }
 
     stages {
@@ -31,15 +31,13 @@ pipeline {
                     // Captura o NO_ERROR da saída
                     def statusMatch = output =~ /"NO_ERROR"/
                     if (statusMatch) {
-                        env.SUCCESS_COUNT = env.SUCCESS_COUNT.toInteger() + 1
-                        echo "Sucesso! Contador: ${env.SUCCESS_COUNT}"
+                        SUCCESS_COUNT = SUCCESS_COUNT.toInteger() + 1
+                        echo "Sucesso! Contador: ${SUCCESS_COUNT}"
                     } else {
-                        env.SUCCESS_COUNT = 0
+                        SUCCESS_COUNT = 0
                         echo "Erro encontrado. Contador resetado."
                     }
 
-                    // Grava o contador de sucesso em um arquivo
-                    writeFile file: 'success_count.txt', text: "${SUCCESS_COUNT}"
                 }
             }
         }
@@ -49,7 +47,7 @@ pipeline {
         always {
             script {
                 // Exibe o valor da variável SUCCESS_COUNT ao final
-                echo "Valor final do SUCCESS_COUNT: ${env.SUCCESS_COUNT}"
+                echo "Valor final do SUCCESS_COUNT: ${SUCCESS_COUNT}"
                 }
             }
         }
