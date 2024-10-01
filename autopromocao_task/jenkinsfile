@@ -9,7 +9,7 @@ pipeline {
     }
 
     environment {
-        SUCCESS_COUNT = 0  // Contador de sucessos
+        env.SUCCESS_COUNT = 0  // Contador de sucessos
     }
 
     stages {
@@ -31,10 +31,10 @@ pipeline {
                     // Captura o NO_ERROR da saída
                     def statusMatch = output =~ /"NO_ERROR"/
                     if (statusMatch) {
-                        SUCCESS_COUNT = SUCCESS_COUNT.toInteger() + 1
-                        echo "Sucesso! Contador: ${SUCCESS_COUNT}"
+                        env.SUCCESS_COUNT = env.SUCCESS_COUNT.toInteger() + 1
+                        echo "Sucesso! Contador: ${env.SUCCESS_COUNT}"
                     } else {
-                        SUCCESS_COUNT = 0
+                        env.SUCCESS_COUNT = 0
                         echo "Erro encontrado. Contador resetado."
                     }
 
@@ -45,15 +45,12 @@ pipeline {
         }
     }
 
-    post {
-        success {
+     post {
+        always {
             script {
-                // Se atingiu 3 sucessos, dispara a pipeline de produção
-                def successCount = readFile('success_count.txt').toInteger()
-                if (successCount >= 3) {
-                    build job: 'criação_Job_Talend'  // Nome da outra pipeline que promove para produção
+                // Exibe o valor da variável SUCCESS_COUNT ao final
+                echo "Valor final do SUCCESS_COUNT: ${env.SUCCESS_COUNT}"
                 }
             }
         }
     }
-}
