@@ -16,18 +16,21 @@ pipeline {
         stage('Acessar Servidor e Verificar Status') {
             steps {
                 script {
-                    def status = sh(script: """
-                    sshpass -p 'Sys@lo321' ssh -o StrictHostKeyChecking=no sysvision@10.150.71.101 '
-                    cd /opt/Talend-8.0.1/tac/apache-tomcat/webapps/org.talend.administrator/WEB-INF/classes/ &&
-                    ./MetaServletCaller.sh --tac-url=http://10.150.71.101:8080/org.talend.administrator --json-params="
-                    { 
-                        \\"actionName\\": \\"getTaskStatus\\",
-                        \\"authPass\\": \\"${Senha}\\",
-                        \\"authUser\\": \\"${Email}\\",
-                        \\"taskId\\": \\"${taskId}\\"
-                    }"'""", returnStdout: true).trim()
+                    // Executa o comando e captura a saída
+                    def output = sh(script: """ 
+                        sshpass -p 'Sys@lo321' ssh -o StrictHostKeyChecking=no sysvision@10.150.71.101 '
+                        cd /opt/Talend-8.0.1/tac/apache-tomcat/webapps/org.talend.administrator/WEB-INF/classes/ &&
+                        ./MetaServletCaller.sh --tac-url=http://10.150.71.101:8080/org.talend.administrator --json-params="
+                        { 
+                            \\"actionName\\": \\"getTaskStatus\\",
+                            \\"authPass\\": \\"${Senha}\\",
+                            \\"authUser\\": \\"${Email}\\",
+                            \\"taskId\\": \\"${taskId}\\"
+                        }"'""", returnStdout: true).trim()
 
-                    if (status == "NO_ERROR") {
+                    // Captura o NO_ERROR da saída
+                    def statusMatch = output =~ /"NO_ERROR"/
+                    if (statusMatch) {
                         SUCCESS_COUNT = SUCCESS_COUNT.toInteger() + 1
                         echo "Sucesso! Contador: ${SUCCESS_COUNT}"
                     } else {
@@ -35,6 +38,7 @@ pipeline {
                         echo "Erro encontrado. Contador resetado."
                     }
 
+                    // Grava o contador de sucesso em um arquivo
                     writeFile file: 'success_count.txt', text: "${SUCCESS_COUNT}"
                 }
             }
